@@ -362,6 +362,7 @@ VREP_DLLEXPORT unsigned char v_repStart(void* reservedPointer,int reservedInt)
     simRegisterScriptVariable("simros_strmcmd_get_string_parameter",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_string_parameter))).c_str(),0);
     simRegisterScriptVariable("simros_strmcmd_get_ui_event_button",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_ui_event_button))).c_str(),0);
     simRegisterScriptVariable("simros_strmcmd_get_vision_sensor_depth_buffer",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_vision_sensor_depth_buffer))).c_str(),0);
+    simRegisterScriptVariable("simros_strmcmd_get_vision_sensor_depth_image",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_vision_sensor_depth_image))).c_str(),0);
     simRegisterScriptVariable("simros_strmcmd_get_vision_sensor_image",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_vision_sensor_image))).c_str(),0);
 //  simRegisterScriptVariable("simros_strmcmd_get_joint_force",(boost::lexical_cast<std::string>(int(simros_strmcmd_get_joint_force))).c_str(),0);
     simRegisterScriptVariable("simros_strmcmd_read_collision",(boost::lexical_cast<std::string>(int(simros_strmcmd_read_collision))).c_str(),0);

@@ -29,6 +29,7 @@
 // This file was automatically created for V-REP release V3.3.2 on August 29th 2016
 
 #include "sensor_msgs/distortion_models.h"
+#include "sensor_msgs/image.h"
 #include <boost/algorithm/string/replace.hpp>
 #include <map>
 #include "../include/vrep_plugin/ROS_server.h"
@@ -721,6 +722,15 @@ bool ROS_server::launchPublisher(SPublisherData& pub,int queueSize)
         if (simGetObjectType(pub.auxInt1)!=sim_object_visionsensor_type)
             return(false); // invalid data!
         pub.generalPublisher=node->advertise<vrep_common::VisionSensorDepthBuff>(pub.topicName,queueSize);
+        pub.dependencyCnt++;
+        return(true);
+    }
+
+    if (pub.cmdID==simros_strmcmd_get_vision_sensor_depth_image)
+    {
+        if (simGetObjectType(pub.auxInt1)!=sim_object_visionsensor_type)
+            return(false); // invalid data!
+        pub.generalPublisher=node->advertise<sensor_msgs::Image>(pub.topicName,queueSize);
         pub.dependencyCnt++;
         return(true);
     }
@@ -1486,6 +1496,60 @@ void ROS_server::streamAllData()
                         simReleaseBuffer((char*)buff);
                         publishedSomething=true;
                         publishers[pubI].generalPublisher.publish(fl);
+                    }
+                    else
+                        removeThisPublisher=true;
+                }
+                else
+                    removeThisPublisher=true;
+            }
+
+            if (publishers[pubI].cmdID==simros_strmcmd_get_vision_sensor_depth_image)
+            {
+                int resol[2];
+                if (simGetVisionSensorResolution(publishers[pubI].auxInt1,resol)!=-1)
+                {
+                    float* buff=simGetVisionSensorDepthBuffer(publishers[pubI].auxInt1);
+                    if (buff!=NULL)
+                    {
+                        // Values returned by simGetVisionSensorDepthBuffer are
+                        // positions between near and far clipping planes.
+                        // Map the [0..1] range to millimeters required by the
+                        // OpenNI format.
+                        float clip_near = 1;
+                        simGetObjectFloatParameter(publishers[pubI].auxInt1,
+                                                   1000, &clip_near);
+                        float clip_far = 2;
+                        simGetObjectFloatParameter(publishers[pubI].auxInt1,
+                                                   1001, &clip_far);
+                        float clip_range = clip_far - clip_near;
+
+                        sensor_msgs::Image out;
+
+                        char* nm=simGetObjectName(publishers[pubI].auxInt1);
+                        out.header.frame_id = objNameToFrameId(nm);
+                        simReleaseBuffer(nm);
+                        
+                        out.header.stamp = inf.headerInfo.stamp;
+                        out.encoding = "mono16";
+                        out.width=resol[0];
+                        out.height=resol[1];
+                        out.is_bigendian = 0;
+                        out.step = out.width * 2;
+                        for (int y = out.height-1; y >= 0; y--) {
+                          for (int x = 0; x < out.width; x++) {
+                            float depth = buff[y * out.width + x];
+                            float depth_mm = 1000 * (clip_near + depth * clip_range);
+
+                            // OpenNI format reserves 0 for invalid value.
+                            uint16_t v = ((depth_mm > 0) && (depth_mm < (1 << 16))) ? depth_mm : 0;
+                            out.data.push_back(v & 0xff);
+                            out.data.push_back((v >> 8) & 0xff);
+                          }
+                        }
+                        simReleaseBuffer((char*)buff);
+                        publishedSomething=true;
+                        publishers[pubI].generalPublisher.publish(out);
                     }
                     else
                         removeThisPublisher=true;
